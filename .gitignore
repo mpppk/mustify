@@ -1,3 +1,4 @@
 .idea/
 vendor/
 registry/wire_gen.go
+mustify

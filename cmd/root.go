@@ -3,11 +3,13 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
-	"github.com/mpppk/cli-template/infra"
-	"github.com/mpppk/cli-template/util"
+	"github.com/mpppk/mustify/lib"
 
-	"github.com/mpppk/cli-template/cmd/option"
+	"github.com/mpppk/mustify/util"
+
+	"github.com/mpppk/mustify/cmd/option"
 
 	"github.com/spf13/afero"
 
@@ -20,21 +22,40 @@ var cfgFile string
 
 // NewRootCmd generate root cmd
 func NewRootCmd(fs afero.Fs) (*cobra.Command, error) {
-	pPreRunE := func(cmd *cobra.Command, args []string) error {
-		conf, err := option.NewRootCmdConfigFromViper()
-		if err != nil {
-			return err
-		}
-		infra.InitializeLog(conf.Verbose)
-		return nil
-	}
-
 	cmd := &cobra.Command{
-		Use:               "cli-template",
-		Short:             "cli-template",
-		SilenceErrors:     true,
-		SilenceUsage:      true,
-		PersistentPreRunE: pPreRunE,
+		Use:           "mustify",
+		Short:         "generate MustXXX methods from go source",
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			conf, err := option.NewRootCmdConfigFromViper()
+			if err != nil {
+				return err
+			}
+			util.InitializeLog(conf.Verbose)
+
+			if conf.Out == "" {
+				base := filepath.Base(conf.File)
+				o := filepath.Join(filepath.Dir(conf.File), "must-"+base)
+				conf.File = o
+			}
+
+			fileMap, err := lib.GenerateErrorWrappersFromPackage(conf.File, "main", "must-")
+			if err != nil {
+				panic(err)
+			}
+
+			for fp, file := range fileMap {
+				dirPath := filepath.Dir(fp)
+				fileName := filepath.Base(fp)
+				newFilePath := filepath.Join(dirPath, "must-"+fileName)
+				if err := lib.WriteAstFile(newFilePath, file); err != nil {
+					panic(err)
+				}
+			}
+
+			return nil
+		},
 	}
 
 	if err := registerSubCommands(fs, cmd); err != nil {
@@ -63,18 +84,22 @@ func registerSubCommands(fs afero.Fs, cmd *cobra.Command) error {
 
 func registerFlags(cmd *cobra.Command) error {
 	flags := []option.Flag{
-		&option.StringFlag{
-			BaseFlag: &option.BaseFlag{
-				Name:         "config",
-				IsPersistent: true,
-				Usage:        "config file (default is $HOME/.cli-template.yaml)",
-			}},
 		&option.BoolFlag{
 			BaseFlag: &option.BaseFlag{
 				Name:         "verbose",
 				Shorthand:    "v",
 				IsPersistent: true,
 				Usage:        "Show more logs",
+			}},
+		&option.StringFlag{
+			BaseFlag: &option.BaseFlag{
+				Name:  "file",
+				Usage: "source file path",
+			}},
+		&option.StringFlag{
+			BaseFlag: &option.BaseFlag{
+				Name:  "out",
+				Usage: "output file path",
 			}},
 	}
 	return option.RegisterFlags(cmd, flags)
@@ -110,9 +135,9 @@ func initConfig() {
 			os.Exit(1)
 		}
 
-		// Search config in home directory with name ".cli-template" (without extension).
+		// Search config in home directory with name ".mustify" (without extension).
 		viper.AddConfigPath(home)
-		viper.SetConfigName(".cli-template")
+		viper.SetConfigName(".mustify")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
