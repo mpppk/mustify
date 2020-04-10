@@ -24,10 +24,6 @@ func generateAssignStmt(lhNames []string, callExpr *ast.CallExpr) *ast.AssignStm
 }
 
 func generatePanicIfErrorExistStmtAst(errValName string) *ast.IfStmt {
-	// generatePanicIfErrorExistStmtAst return ast of below code
-	// if errValName != nil {
-	//     panic(errValName)
-	// }
 	return &ast.IfStmt{
 		Cond: &ast.BinaryExpr{
 			X: &ast.Ident{
