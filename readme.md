@@ -26,8 +26,12 @@ func Sqrt(x float64) (float64, error) {
     return math.Sqrt(x), nil
 }
 
-func noErrorReturnFunc() int {
-    return 42
+func SqrtWithoutError(x float64) float64 {
+    return math.Sqrt(x)
+}
+
+func Sum(v, v0, v1 int) (int, error) {
+	return v + v0 + v1, nil
 }
 
 func unexportedFunc() error {
@@ -48,5 +52,13 @@ func MustSqrt(x float64) float64 {
 		panic(err)
 	}
 	return v
+}
+
+func MustSum(v, v0, v1 int) int {
+	v2, err := Sum(v, v0, v1)
+	if err != nil {
+		panic(err)
+	}
+	return v2
 }
 ```
