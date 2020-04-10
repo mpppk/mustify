@@ -46,6 +46,7 @@ func NewRootCmd(fs afero.Fs) (*cobra.Command, error) {
 				dirPath := filepath.Dir(fp)
 				fileName := filepath.Base(fp)
 				newFilePath := filepath.Join(dirPath, "must-"+fileName)
+				cmd.Println(newFilePath)
 				if err := lib.WriteAstFile(newFilePath, file); err != nil {
 					return err
 				}
@@ -74,6 +75,7 @@ func Execute() {
 	if err != nil {
 		panic(err)
 	}
+	rootCmd.SetOut(os.Stdout)
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Print(util.PrettyPrintError(err))
 		os.Exit(1)
