@@ -1,17 +1,15 @@
 # mustify
-[![CircleCI](https://circleci.com/gh/mpppk/mustify.svg?style=svg)](https://circleci.com/gh/mpppk/mustify)
-[![Build status](https://ci.appveyor.com/api/projects/status/qv1fyq6fm8ni4cne?svg=true)](https://ci.appveyor.com/project/mpppk/mustify)
 ![GitHub Actions](https://github.com/mpppk/mustify/workflows/Go/badge.svg)
 [![codecov](https://codecov.io/gh/mpppk/mustify/branch/master/graph/badge.svg)](https://codecov.io/gh/mpppk/mustify)
 [![GoDoc](https://godoc.org/github.com/mpppk/mustify?status.svg)](https://godoc.org/github.com/mpppk/mustify)
 
 mustify is CLI tool for generate MustXXX methods from go source which includes methods that return error.
 
-In Go, there is a culture where a method that occur a panic instead of returning an error has Must as a prefix.  
+In Go, there is a culture where a method that occur a panic instead of returning an error has `Must` as a prefix.  
 For example, `regexp.MustCompile` is the wrapper for `regexp.Compile` which occure panic if `regexp.Compile` return error.
 mustify generate the wrapper automatically from all functions which return error.
 
-## Getting Started
+## Usage
 Assume you have below functions in `lib/math.go`
 
 ```go
