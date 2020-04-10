@@ -2,9 +2,6 @@ package lib
 
 import (
 	"go/ast"
-	"go/format"
-	"go/token"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -72,26 +69,4 @@ func funcDeclsToErrorFuncWrappers(funcDecls []*ast.FuncDecl, pkg *loader.Package
 func pathHasPrefix(path, prefix string) bool {
 	fileName := filepath.Base(path)
 	return strings.HasPrefix(fileName, prefix)
-}
-
-func WriteAstFile(filePath string, file *ast.File) error {
-	absFilePath, err := filepath.Abs(filePath)
-	if err != nil {
-		return errors.Wrap(err, "failed to get abs file path: "+absFilePath)
-	}
-
-	f, err := os.Create(absFilePath)
-	if err != nil {
-		return errors.Wrap(err, "failed to create file: "+absFilePath)
-	}
-
-	defer func() {
-		if err := f.Close(); err != nil {
-			panic(err)
-		}
-	}()
-	if err := format.Node(f, token.NewFileSet(), file); err != nil {
-		return errors.Wrap(err, "failed to write ast file to  "+absFilePath)
-	}
-	return nil
 }
