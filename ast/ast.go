@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"go/types"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-toolsmith/astcopy"
 	"github.com/pkg/errors"
@@ -25,6 +26,10 @@ func NewProgram(fileName string) (*loader.Program, error) {
 
 	var files []*ast.File
 	for _, pkg := range packages {
+		// ignore xxx_test package
+		if strings.HasSuffix(pkg.Name, "_test") {
+			continue
+		}
 		for _, file := range pkg.Files {
 			files = append(files, file)
 		}
