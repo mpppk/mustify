@@ -17,31 +17,6 @@ import (
 	goofyast "github.com/mpppk/mustify/ast"
 )
 
-func GenerateErrorWrappersFromFile(filePath string) (*ast.File, []ast.Decl, error) {
-	absFilePath, err := filepath.Abs(filePath)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to get abs file path")
-	}
-
-	prog, err := goofyast.NewProgram(filePath)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to load program file")
-	}
-
-	pkg, file, ok := findPkgAndFileFromProgram(prog, absFilePath)
-	if !ok {
-		return nil, nil, errors.New("file not found: " + filePath)
-	}
-
-	var newDecls []ast.Decl
-	importDecls := goofyast.ExtractImportDeclsFromDecls(file.Decls)
-	newDecls = append(newDecls, goofyast.ImportDeclsToDecls(importDecls)...)
-	exportedFuncDecls := extractExportedFuncDeclsFromDecls(file.Decls)
-	errorWrappers := funcDeclsToErrorFuncWrappers(exportedFuncDecls, pkg)
-	newDecls = append(newDecls, errorWrappers...)
-	return file, newDecls, nil
-}
-
 func GenerateErrorWrappersFromPackage(filePath, pkgName, ignorePrefix string) (map[string]*ast.File, error) {
 	prog, err := goofyast.NewProgram(filePath)
 	if err != nil {
@@ -91,21 +66,6 @@ func funcDeclsToErrorFuncWrappers(funcDecls []*ast.FuncDecl, pkg *loader.Package
 		}
 	}
 	return
-}
-
-func findPkgAndFileFromProgram(prog *loader.Program, targetAbsFilePath string) (*loader.PackageInfo, *ast.File, bool) {
-	for _, pkg := range prog.Created {
-		for _, file := range pkg.Files {
-			currentFilePath := prog.Fset.File(file.Pos()).Name()
-			if absCurrentFilePath, err := filepath.Abs(currentFilePath); err == nil {
-				if targetAbsFilePath == absCurrentFilePath {
-					return pkg, file, true
-				}
-			}
-
-		}
-	}
-	return nil, nil, false
 }
 
 func pathHasPrefix(path, prefix string) bool {
