@@ -6,36 +6,31 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
+	"io/ioutil"
 	"path/filepath"
 	"strings"
 
 	"github.com/go-toolsmith/astcopy"
-	"github.com/pkg/errors"
 	"golang.org/x/tools/go/loader"
 )
 
-func NewProgram(fileName string) (*loader.Program, error) {
+func NewProgramFromDir(pkg, dirPath string) (*loader.Program, error) {
+	files, err := ioutil.ReadDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var filePaths []string
+	for _, file := range files {
+		if !file.IsDir() && !strings.Contains(file.Name(), "_test") {
+			filePaths = append(filePaths, filepath.Join(dirPath, file.Name()))
+		}
+	}
+
 	lo := &loader.Config{
 		Fset:       token.NewFileSet(),
-		ParserMode: parser.ParseComments}
-	dirPath := filepath.Dir(fileName)
-	packages, err := parser.ParseDir(lo.Fset, dirPath, nil, parser.Mode(0))
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse dir: "+dirPath)
-	}
-
-	var files []*ast.File
-	for _, pkg := range packages {
-		// ignore xxx_test package
-		if strings.HasSuffix(pkg.Name, "_test") {
-			continue
-		}
-		for _, file := range pkg.Files {
-			files = append(files, file)
-		}
-	}
-
-	lo.CreateFromFiles("main", files...)
+		ParserMode: parser.DeclarationErrors}
+	lo.CreateFromFilenames(pkg, filePaths...)
 	return lo.Load()
 }
 

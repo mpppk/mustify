@@ -2,11 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"go/format"
-	"go/token"
 	"os"
-
-	"github.com/pkg/errors"
+	"path/filepath"
 
 	"github.com/mpppk/mustify/lib"
 
@@ -38,16 +35,19 @@ func NewRootCmd(fs afero.Fs) (*cobra.Command, error) {
 			}
 			util.InitializeLog(conf.Verbose)
 
-			filePath := args[0]
+			dirPath := args[0]
 
-			fileMap, err := lib.GenerateErrorWrappersFromPackage(filePath, "main", "must-")
+			fileMap, err := lib.GenerateErrorWrappersFromPackage(dirPath, "must-")
 			if err != nil {
 				panic(err)
 			}
 
-			for _, file := range fileMap {
-				if err := format.Node(os.Stdout, token.NewFileSet(), file); err != nil {
-					return errors.Wrap(err, "failed to write ast file to stdout")
+			for fp, file := range fileMap {
+				dirPath := filepath.Dir(fp)
+				fileName := filepath.Base(fp)
+				newFilePath := filepath.Join(dirPath, "must-"+fileName)
+				if err := lib.WriteAstFile(newFilePath, file); err != nil {
+					return err
 				}
 			}
 

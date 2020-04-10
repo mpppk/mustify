@@ -2,6 +2,9 @@ package lib
 
 import (
 	"go/ast"
+	"go/format"
+	"go/token"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -14,13 +17,13 @@ import (
 	goofyast "github.com/mpppk/mustify/ast"
 )
 
-func GenerateErrorWrappersFromPackage(filePath, pkgName, ignorePrefix string) (map[string]*ast.File, error) {
-	prog, err := goofyast.NewProgram(filePath)
+func GenerateErrorWrappersFromPackage(dirPath, ignorePrefix string) (map[string]*ast.File, error) {
+	prog, err := goofyast.NewProgramFromDir("main", dirPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to load program file")
 	}
 
-	pkg := prog.Package(pkgName)
+	pkg := prog.Created[0] // FIXME
 	m := map[string]*ast.File{}
 	for _, file := range pkg.Files {
 		filePath := prog.Fset.File(file.Pos()).Name()
@@ -69,4 +72,21 @@ func funcDeclsToErrorFuncWrappers(funcDecls []*ast.FuncDecl, pkg *loader.Package
 func pathHasPrefix(path, prefix string) bool {
 	fileName := filepath.Base(path)
 	return strings.HasPrefix(fileName, prefix)
+}
+
+func WriteAstFile(filePath string, file *ast.File) error {
+	f, err := os.Create(filePath)
+	if err != nil {
+		return errors.Wrap(err, "failed to create file: "+filePath)
+	}
+
+	defer func() {
+		if err := f.Close(); err != nil {
+			panic(err)
+		}
+	}()
+	if err := format.Node(f, token.NewFileSet(), file); err != nil {
+		return errors.Wrap(err, "failed to write ast file to  "+filePath)
+	}
+	return nil
 }
