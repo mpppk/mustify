@@ -27,6 +27,7 @@ func NewRootCmd(fs afero.Fs) (*cobra.Command, error) {
 		Short:         "generate MustXXX methods from go source",
 		SilenceErrors: true,
 		SilenceUsage:  true,
+		Args:          cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			conf, err := option.NewRootCmdConfigFromViper()
 			if err != nil {
@@ -34,13 +35,15 @@ func NewRootCmd(fs afero.Fs) (*cobra.Command, error) {
 			}
 			util.InitializeLog(conf.Verbose)
 
+			filePath := args[0]
+
 			if conf.Out == "" {
-				base := filepath.Base(conf.File)
-				o := filepath.Join(filepath.Dir(conf.File), "must-"+base)
-				conf.File = o
+				base := filepath.Base(filePath)
+				o := filepath.Join(filepath.Dir(filePath), "must-"+base)
+				filePath = o
 			}
 
-			fileMap, err := lib.GenerateErrorWrappersFromPackage(conf.File, "main", "must-")
+			fileMap, err := lib.GenerateErrorWrappersFromPackage(filePath, "main", "must-")
 			if err != nil {
 				panic(err)
 			}
@@ -73,11 +76,6 @@ func registerFlags(cmd *cobra.Command) error {
 				Shorthand:    "v",
 				IsPersistent: true,
 				Usage:        "Show more logs",
-			}},
-		&option.StringFlag{
-			BaseFlag: &option.BaseFlag{
-				Name:  "file",
-				Usage: "source file path",
 			}},
 		&option.StringFlag{
 			BaseFlag: &option.BaseFlag{
