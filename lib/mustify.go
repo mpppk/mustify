@@ -27,6 +27,7 @@ func GenerateErrorWrappersFromPackage(filePath, pkgName, ignorePrefix string) (m
 	m := map[string]*ast.File{}
 	for _, file := range pkg.Files {
 		filePath := prog.Fset.File(file.Pos()).Name()
+
 		if pathHasPrefix(filePath, ignorePrefix) {
 			continue
 		}

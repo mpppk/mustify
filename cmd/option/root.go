@@ -9,7 +9,6 @@ import (
 // RootCmdConfig is config for root command
 type RootCmdConfig struct {
 	Verbose bool
-	Out     string
 }
 
 // NewRootCmdConfigFromViper generate config for sum command from viper

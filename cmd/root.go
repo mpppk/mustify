@@ -2,8 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"go/format"
+	"go/token"
 	"os"
-	"path/filepath"
+
+	"github.com/pkg/errors"
 
 	"github.com/mpppk/mustify/lib"
 
@@ -37,23 +40,14 @@ func NewRootCmd(fs afero.Fs) (*cobra.Command, error) {
 
 			filePath := args[0]
 
-			if conf.Out == "" {
-				base := filepath.Base(filePath)
-				o := filepath.Join(filepath.Dir(filePath), "must-"+base)
-				filePath = o
-			}
-
 			fileMap, err := lib.GenerateErrorWrappersFromPackage(filePath, "main", "must-")
 			if err != nil {
 				panic(err)
 			}
 
-			for fp, file := range fileMap {
-				dirPath := filepath.Dir(fp)
-				fileName := filepath.Base(fp)
-				newFilePath := filepath.Join(dirPath, "must-"+fileName)
-				if err := lib.WriteAstFile(newFilePath, file); err != nil {
-					panic(err)
+			for _, file := range fileMap {
+				if err := format.Node(os.Stdout, token.NewFileSet(), file); err != nil {
+					return errors.Wrap(err, "failed to write ast file to stdout")
 				}
 			}
 
@@ -69,20 +63,7 @@ func NewRootCmd(fs afero.Fs) (*cobra.Command, error) {
 }
 
 func registerFlags(cmd *cobra.Command) error {
-	flags := []option.Flag{
-		&option.BoolFlag{
-			BaseFlag: &option.BaseFlag{
-				Name:         "verbose",
-				Shorthand:    "v",
-				IsPersistent: true,
-				Usage:        "Show more logs",
-			}},
-		&option.StringFlag{
-			BaseFlag: &option.BaseFlag{
-				Name:  "out",
-				Usage: "output file path",
-			}},
-	}
+	flags := []option.Flag{}
 	return option.RegisterFlags(cmd, flags)
 }
 
