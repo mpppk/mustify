@@ -34,7 +34,7 @@ func NewProgramFromDir(pkg, dirPath string) (*loader.Program, error) {
 	return lo.Load()
 }
 
-func GenerateErrorFuncWrapper(currentPkg *loader.PackageInfo, orgFuncDecl *ast.FuncDecl) (*ast.FuncDecl, bool) {
+func GenerateErrorFuncWrapper(scope *types.Scope, orgFuncDecl *ast.FuncDecl) (*ast.FuncDecl, bool) {
 	funcDecl := astcopy.FuncDecl(orgFuncDecl)
 	if !IsErrorFunc(funcDecl) {
 		return nil, false
@@ -53,11 +53,11 @@ func GenerateErrorFuncWrapper(currentPkg *loader.PackageInfo, orgFuncDecl *ast.F
 
 	if len(lhs) == 0 {
 		for range results {
-			tempValueName := getAvailableValueName(currentPkg.Pkg, "v", funcDecl.Body.Pos())
+			tempValueName := getAvailableValueName(scope, "v", funcDecl.Body.Pos())
 			lhs = append(lhs, tempValueName)
 		}
 
-		tempErrValueName := getAvailableValueName(currentPkg.Pkg, "err", funcDecl.Body.Pos())
+		tempErrValueName := getAvailableValueName(scope, "err", funcDecl.Body.Pos())
 		lhs[len(lhs)-1] = tempErrValueName
 	}
 
@@ -88,8 +88,8 @@ func newIdents(identNames []string) (idents []*ast.Ident) {
 	return
 }
 
-func getAvailableValueName(currentPkg *types.Package, valName string, pos token.Pos) string {
-	innerMost := currentPkg.Scope().Innermost(pos)
+func getAvailableValueName(scope *types.Scope, valName string, pos token.Pos) string {
+	innerMost := scope.Innermost(pos)
 	s, _ := innerMost.LookupParent(valName, pos)
 	if s == nil {
 		return valName

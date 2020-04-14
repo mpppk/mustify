@@ -2,50 +2,73 @@ package lib
 
 import (
 	"go/ast"
-	"go/format"
+	"go/parser"
 	"go/token"
-	"os"
+	"go/types"
 	"path/filepath"
 	"strings"
+
+	"golang.org/x/tools/go/packages"
 
 	"github.com/go-toolsmith/astcopy"
 
 	"github.com/pkg/errors"
 
-	"golang.org/x/tools/go/loader"
-
 	goofyast "github.com/mpppk/mustify/ast"
 )
 
-func GenerateErrorWrappersFromPackage(dirPath, ignorePrefix string) (map[string]*ast.File, error) {
-	prog, err := goofyast.NewProgramFromDir("main", dirPath)
+func GenerateErrorWrappersFromFilePath(filePath string) (*ast.File, bool, error) {
+	dirPath := filepath.Dir(filePath)
+	if !strings.HasPrefix(dirPath, ".") && !strings.HasSuffix(dirPath, "/") {
+		dirPath = "./" + dirPath
+	}
+	file, err := parser.ParseFile(token.NewFileSet(), filePath, nil, parser.ParseComments)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to load program file")
+		return nil, false, err
 	}
 
-	pkg := prog.Created[0] // FIXME
-	m := map[string]*ast.File{}
-	for _, file := range pkg.Files {
-		filePath := prog.Fset.File(file.Pos()).Name()
-
-		if pathHasPrefix(filePath, ignorePrefix) {
-			continue
-		}
-
-		newFile := astcopy.File(file)
-		var newDecls []ast.Decl
-		importDecls := goofyast.ExtractImportDeclsFromDecls(newFile.Decls)
-		newDecls = append(newDecls, goofyast.ImportDeclsToDecls(importDecls)...)
-		exportedFuncDecls := extractExportedFuncDeclsFromDecls(newFile.Decls)
-		errorWrappers := funcDeclsToErrorFuncWrappers(exportedFuncDecls, pkg)
-		if len(errorWrappers) <= 0 {
-			continue
-		}
-		newDecls = append(newDecls, errorWrappers...)
-		newFile.Decls = newDecls
-		m[filePath] = newFile
+	pkg, err := NewPackage(dirPath, file.Name.Name)
+	if err != nil {
+		return nil, false, err
 	}
-	return m, nil
+
+	return generateErrorWrappersFromFile(file, pkg.Types.Scope())
+}
+
+func NewPackage(path, packageName string) (*packages.Package, error) {
+	config := &packages.Config{
+		Mode: packages.NeedCompiledGoFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.LoadAllSyntax,
+	}
+	pkgs, err := packages.Load(config, path)
+	if err != nil {
+		return nil, err
+	}
+	if packages.PrintErrors(pkgs) > 0 {
+		return nil, errors.New("error occurred in NewProgramFromPackages")
+	}
+	for _, pkg := range pkgs {
+		if pkg.Name == packageName {
+			return pkg, nil
+		}
+	}
+	return nil, errors.New("pkg not found: " + packageName)
+}
+
+func generateErrorWrappersFromFile(file *ast.File, scope *types.Scope) (*ast.File, bool, error) {
+	newFile := astcopy.File(file)
+	//newFile.Decls = []ast.Decl{}
+	var newDecls []ast.Decl
+	importDecls := goofyast.ExtractImportDeclsFromDecls(newFile.Decls)
+	newDecls = append(newDecls, goofyast.ImportDeclsToDecls(importDecls)...)
+	//newFile.Decls = append(newFile.Decls, goofyast.ImportDeclsToDecls(importDecls)...)
+	exportedFuncDecls := extractExportedFuncDeclsFromDecls(newFile.Decls)
+	errorWrappers := funcDeclsToErrorFuncWrappers(exportedFuncDecls, scope)
+	if len(errorWrappers) <= 0 {
+		return nil, false, nil
+	}
+	newDecls = append(newDecls, errorWrappers...)
+	newFile.Decls = newDecls
+	return newFile, true, nil
 }
 
 func extractExportedFuncDeclsFromDecls(decls []ast.Decl) (funcDecls []*ast.FuncDecl) {
@@ -59,34 +82,11 @@ func extractExportedFuncDeclsFromDecls(decls []ast.Decl) (funcDecls []*ast.FuncD
 	return
 }
 
-func funcDeclsToErrorFuncWrappers(funcDecls []*ast.FuncDecl, pkg *loader.PackageInfo) (newDecls []ast.Decl) {
+func funcDeclsToErrorFuncWrappers(funcDecls []*ast.FuncDecl, scope *types.Scope) (newDecls []ast.Decl) {
 	for _, funcDecl := range funcDecls {
-		//newDecl, ok := goofyast.ConvertErrorFuncToMustFunc(prog, pkg, funcDecl)
-		if newDecl, ok := goofyast.GenerateErrorFuncWrapper(pkg, funcDecl); ok {
+		if newDecl, ok := goofyast.GenerateErrorFuncWrapper(scope, funcDecl); ok {
 			newDecls = append(newDecls, newDecl)
 		}
 	}
 	return
-}
-
-func pathHasPrefix(path, prefix string) bool {
-	fileName := filepath.Base(path)
-	return strings.HasPrefix(fileName, prefix)
-}
-
-func WriteAstFile(filePath string, file *ast.File) error {
-	f, err := os.Create(filePath)
-	if err != nil {
-		return errors.Wrap(err, "failed to create file: "+filePath)
-	}
-
-	defer func() {
-		if err := f.Close(); err != nil {
-			panic(err)
-		}
-	}()
-	if err := format.Node(f, token.NewFileSet(), file); err != nil {
-		return errors.Wrap(err, "failed to write ast file to  "+filePath)
-	}
-	return nil
 }
