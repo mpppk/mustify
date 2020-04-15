@@ -42,23 +42,23 @@ func unexportedFunc() error {
 Then execute mustify:
 
 ```shell script
-$ mustify lib | xargs goimports -w
+$ mustify < lib/math.go > lib/must-math.go
 $ cat lib/must-math.go
 package lib
 
 func MustSqrt(x float64) float64 {
-	v, err := Sqrt(x)
-	if err != nil {
-		panic(err)
+	_v, _err := Sqrt(x)
+	if _err != nil {
+		panic(_err)
 	}
-	return v
+	return _v
 }
 
 func MustSum(v, v0, v1 int) int {
-	v2, err := Sum(v, v0, v1)
-	if err != nil {
-		panic(err)
+	_v, _err := Sum(v, v0, v1)
+	if _err != nil {
+		panic(_err)
 	}
-	return v2
+	return _v
 }
 ```
