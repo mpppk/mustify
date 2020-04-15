@@ -1,16 +1,16 @@
 package test1
 
 func MustF2() {
-	err := F2()
-	if err != nil {
-		panic(err)
+	_err := F2()
+	if _err != nil {
+		panic(_err)
 	}
 	return
 }
 func MustF3(v int) int {
-	v0, err := F3(v)
-	if err != nil {
-		panic(err)
+	_v0, _err := F3(v)
+	if _err != nil {
+		panic(_err)
 	}
-	return v0
+	return _v0
 }

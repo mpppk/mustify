@@ -3,38 +3,12 @@ package ast
 import (
 	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
-	"go/types"
-	"io/ioutil"
-	"path/filepath"
-	"strings"
 
 	"github.com/go-toolsmith/astcopy"
-	"golang.org/x/tools/go/loader"
 )
 
-func NewProgramFromDir(pkg, dirPath string) (*loader.Program, error) {
-	files, err := ioutil.ReadDir(dirPath)
-	if err != nil {
-		return nil, err
-	}
-
-	var filePaths []string
-	for _, file := range files {
-		if !file.IsDir() && !strings.Contains(file.Name(), "_test") {
-			filePaths = append(filePaths, filepath.Join(dirPath, file.Name()))
-		}
-	}
-
-	lo := &loader.Config{
-		Fset:       token.NewFileSet(),
-		ParserMode: parser.DeclarationErrors}
-	lo.CreateFromFilenames(pkg, filePaths...)
-	return lo.Load()
-}
-
-func GenerateErrorFuncWrapper(scope *types.Scope, orgFuncDecl *ast.FuncDecl) (*ast.FuncDecl, bool) {
+func GenerateErrorFuncWrapper(orgFuncDecl *ast.FuncDecl) (*ast.FuncDecl, bool) {
 	funcDecl := astcopy.FuncDecl(orgFuncDecl)
 	if !IsErrorFunc(funcDecl) {
 		return nil, false
@@ -52,12 +26,12 @@ func GenerateErrorFuncWrapper(scope *types.Scope, orgFuncDecl *ast.FuncDecl) (*a
 	}
 
 	if len(lhs) == 0 {
-		for range results {
-			tempValueName := getAvailableValueName(scope, "v", funcDecl.Body.Pos())
+		for i := 0; i < len(results); i++ {
+			tempValueName := fmt.Sprintf("_v%d", i)
 			lhs = append(lhs, tempValueName)
 		}
 
-		tempErrValueName := getAvailableValueName(scope, "err", funcDecl.Body.Pos())
+		tempErrValueName := "_err"
 		lhs[len(lhs)-1] = tempErrValueName
 	}
 
@@ -86,25 +60,6 @@ func newIdents(identNames []string) (idents []*ast.Ident) {
 		})
 	}
 	return
-}
-
-func getAvailableValueName(scope *types.Scope, valName string, pos token.Pos) string {
-	innerMost := scope.Innermost(pos)
-	s, _ := innerMost.LookupParent(valName, pos)
-	if s == nil {
-		return valName
-	}
-
-	cnt := 0
-	valNameWithNumber := fmt.Sprintf("%v%v", valName, cnt)
-	for {
-		s, _ := innerMost.LookupParent(valNameWithNumber, pos)
-		if s == nil {
-			return valNameWithNumber
-		}
-		cnt++
-		valNameWithNumber = fmt.Sprintf("%v%v", valName, cnt)
-	}
 }
 
 func extractRecvName(funcDecl *ast.FuncDecl) string {

@@ -4,7 +4,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"go/types"
 	"path/filepath"
 	"strings"
 
@@ -26,13 +25,7 @@ func GenerateErrorWrappersFromFilePath(filePath string) (*ast.File, bool, error)
 	if err != nil {
 		return nil, false, err
 	}
-
-	pkg, err := NewPackage(dirPath, file.Name.Name)
-	if err != nil {
-		return nil, false, err
-	}
-
-	return generateErrorWrappersFromFile(file, pkg.Types.Scope())
+	return generateErrorWrappersFromFile(file)
 }
 
 func NewPackage(path, packageName string) (*packages.Package, error) {
@@ -54,15 +47,13 @@ func NewPackage(path, packageName string) (*packages.Package, error) {
 	return nil, errors.New("pkg not found: " + packageName)
 }
 
-func generateErrorWrappersFromFile(file *ast.File, scope *types.Scope) (*ast.File, bool, error) {
+func generateErrorWrappersFromFile(file *ast.File) (*ast.File, bool, error) {
 	newFile := astcopy.File(file)
-	//newFile.Decls = []ast.Decl{}
 	var newDecls []ast.Decl
 	importDecls := goofyast.ExtractImportDeclsFromDecls(newFile.Decls)
 	newDecls = append(newDecls, goofyast.ImportDeclsToDecls(importDecls)...)
-	//newFile.Decls = append(newFile.Decls, goofyast.ImportDeclsToDecls(importDecls)...)
 	exportedFuncDecls := extractExportedFuncDeclsFromDecls(newFile.Decls)
-	errorWrappers := funcDeclsToErrorFuncWrappers(exportedFuncDecls, scope)
+	errorWrappers := funcDeclsToErrorFuncWrappers(exportedFuncDecls)
 	if len(errorWrappers) <= 0 {
 		return nil, false, nil
 	}
@@ -82,9 +73,9 @@ func extractExportedFuncDeclsFromDecls(decls []ast.Decl) (funcDecls []*ast.FuncD
 	return
 }
 
-func funcDeclsToErrorFuncWrappers(funcDecls []*ast.FuncDecl, scope *types.Scope) (newDecls []ast.Decl) {
+func funcDeclsToErrorFuncWrappers(funcDecls []*ast.FuncDecl) (newDecls []ast.Decl) {
 	for _, funcDecl := range funcDecls {
-		if newDecl, ok := goofyast.GenerateErrorFuncWrapper(scope, funcDecl); ok {
+		if newDecl, ok := goofyast.GenerateErrorFuncWrapper(funcDecl); ok {
 			newDecls = append(newDecls, newDecl)
 		}
 	}
