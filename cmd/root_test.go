@@ -17,14 +17,19 @@ const testDir = "../testdata"
 
 func TestRoot(t *testing.T) {
 	cases := []struct {
-		command      string
-		wantFilePath string
+		command       string
+		stdinFilePath string
+		wantFilePath  string
 	}{
 		{
 			command: fmt.Sprintf("%s",
 				filepath.Join(testDir, "test1", "main.go"),
 			),
 			wantFilePath: filepath.Join(testDir, "test1", "want.go.test"),
+		},
+		{
+			stdinFilePath: filepath.Join(testDir, "test1", "main.go"),
+			wantFilePath:  filepath.Join(testDir, "test1", "want.go.test"),
 		},
 	}
 
@@ -36,8 +41,23 @@ func TestRoot(t *testing.T) {
 		}
 		rootCmd.SetOut(buf)
 		rootCmd.SetErr(buf)
-		cmdArgs := strings.Split(c.command, " ")
-		rootCmd.SetArgs(cmdArgs)
+
+		if c.stdinFilePath != "" {
+			inBuf := new(bytes.Buffer)
+			contents, err := ioutil.ReadFile(c.stdinFilePath)
+			if err != nil {
+				t.Fail()
+			}
+			inBuf.Write(contents)
+			rootCmd.SetIn(inBuf)
+		}
+
+		if c.command != "" {
+			cmdArgs := strings.Split(c.command, " ")
+			rootCmd.SetArgs(cmdArgs)
+		} else {
+			rootCmd.SetArgs([]string{})
+		}
 		if err := rootCmd.Execute(); err != nil {
 			t.Errorf("failed to execute rootCmd: %s", err)
 		}

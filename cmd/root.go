@@ -6,9 +6,9 @@ import (
 	"go/token"
 	"os"
 
-	"github.com/pkg/errors"
-
 	"github.com/mpppk/mustify/lib"
+
+	"github.com/pkg/errors"
 
 	"github.com/mpppk/mustify/util"
 
@@ -30,7 +30,7 @@ func NewRootCmd(fs afero.Fs) (*cobra.Command, error) {
 		Short:         "generate MustXXX methods from go source",
 		SilenceErrors: true,
 		SilenceUsage:  true,
-		Args:          cobra.ExactArgs(1),
+		Args:          cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			conf, err := option.NewRootCmdConfigFromViper()
 			if err != nil {
@@ -38,13 +38,16 @@ func NewRootCmd(fs afero.Fs) (*cobra.Command, error) {
 			}
 			util.InitializeLog(conf.Verbose)
 
-			filePath := args[0]
-
-			newFile, ok, err := lib.GenerateErrorWrappersFromFilePath(filePath)
+			filePath := "<standard input>"
+			src := cmd.InOrStdin()
+			if len(args) > 0 {
+				filePath = args[0]
+				src = nil
+			}
+			newFile, ok, err := lib.GenerateErrorWrappersFromReaderOrFile(filePath, src)
 			if err != nil {
 				return err
 			}
-
 			if !ok {
 				return nil
 			}

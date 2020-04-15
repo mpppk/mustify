@@ -4,47 +4,26 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"path/filepath"
-	"strings"
-
-	"golang.org/x/tools/go/packages"
+	"io"
 
 	"github.com/go-toolsmith/astcopy"
-
-	"github.com/pkg/errors"
 
 	ast2 "github.com/mpppk/mustify/ast"
 )
 
-func GenerateErrorWrappersFromFilePath(filePath string) (*ast.File, bool, error) {
-	dirPath := filepath.Dir(filePath)
-	if !strings.HasPrefix(dirPath, ".") && !strings.HasSuffix(dirPath, "/") {
-		dirPath = "./" + dirPath
+func GenerateErrorWrappersFromReaderOrFile(filePath string, reader io.Reader) (*ast.File, bool, error) {
+	if reader == nil {
+		file, err := parser.ParseFile(token.NewFileSet(), filePath, nil, parser.ParseComments)
+		if err != nil {
+			return nil, false, err
+		}
+		return generateErrorWrappersFromFile(file)
 	}
-	file, err := parser.ParseFile(token.NewFileSet(), filePath, nil, parser.ParseComments)
+	file, err := parser.ParseFile(token.NewFileSet(), filePath, reader, parser.ParseComments)
 	if err != nil {
 		return nil, false, err
 	}
 	return generateErrorWrappersFromFile(file)
-}
-
-func NewPackage(path, packageName string) (*packages.Package, error) {
-	config := &packages.Config{
-		Mode: packages.NeedCompiledGoFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.LoadAllSyntax,
-	}
-	pkgs, err := packages.Load(config, path)
-	if err != nil {
-		return nil, err
-	}
-	if packages.PrintErrors(pkgs) > 0 {
-		return nil, errors.New("error occurred in NewProgramFromPackages")
-	}
-	for _, pkg := range pkgs {
-		if pkg.Name == packageName {
-			return pkg, nil
-		}
-	}
-	return nil, errors.New("pkg not found: " + packageName)
 }
 
 func generateErrorWrappersFromFile(file *ast.File) (*ast.File, bool, error) {
