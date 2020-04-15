@@ -13,7 +13,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	goofyast "github.com/mpppk/mustify/ast"
+	ast2 "github.com/mpppk/mustify/ast"
 )
 
 func GenerateErrorWrappersFromFilePath(filePath string) (*ast.File, bool, error) {
@@ -50,8 +50,8 @@ func NewPackage(path, packageName string) (*packages.Package, error) {
 func generateErrorWrappersFromFile(file *ast.File) (*ast.File, bool, error) {
 	newFile := astcopy.File(file)
 	var newDecls []ast.Decl
-	importDecls := goofyast.ExtractImportDeclsFromDecls(newFile.Decls)
-	newDecls = append(newDecls, goofyast.ImportDeclsToDecls(importDecls)...)
+	importDecls := ast2.ExtractImportDeclsFromDecls(newFile.Decls)
+	newDecls = append(newDecls, ast2.ImportDeclsToDecls(importDecls)...)
 	exportedFuncDecls := extractExportedFuncDeclsFromDecls(newFile.Decls)
 	errorWrappers := funcDeclsToErrorFuncWrappers(exportedFuncDecls)
 	if len(errorWrappers) <= 0 {
@@ -75,7 +75,7 @@ func extractExportedFuncDeclsFromDecls(decls []ast.Decl) (funcDecls []*ast.FuncD
 
 func funcDeclsToErrorFuncWrappers(funcDecls []*ast.FuncDecl) (newDecls []ast.Decl) {
 	for _, funcDecl := range funcDecls {
-		if newDecl, ok := goofyast.GenerateErrorFuncWrapper(funcDecl); ok {
+		if newDecl, ok := ast2.GenerateErrorFuncWrapper(funcDecl); ok {
 			newDecls = append(newDecls, newDecl)
 		}
 	}
