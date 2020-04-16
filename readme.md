@@ -14,24 +14,25 @@ Assume you have below functions in `lib/math.go`
 
 ```go
 package lib
+
 import (
-    "errors"
-    "math"
+	"errors"
+	"math"
 )
 
 func Sqrt(x float64) (float64, error) {
-    if x < 0 {
-        return 0, errors.New("invalid value")
-    }
-    return math.Sqrt(x), nil
+	if x < 0 {
+		return 0, errors.New("invalid value")
+	}
+	return math.Sqrt(x), nil
 }
 
 func SqrtWithoutError(x float64) float64 {
-    return math.Sqrt(x)
+	return math.Sqrt(x)
 }
 
-func Sum(v, v0, v1 int) (int, error) {
-	return v + v0 + v1, nil
+func SumAndSub(v1, v2 int) (int, int, error) {
+	return v1 + v2, v1 - v2, nil
 }
 
 func unexportedFunc() error {
@@ -47,18 +48,17 @@ $ cat lib/must-math.go
 package lib
 
 func MustSqrt(x float64) float64 {
-	_v, _err := Sqrt(x)
+	_v0, _err := Sqrt(x)
 	if _err != nil {
 		panic(_err)
 	}
-	return _v
+	return _v0
 }
-
-func MustSum(v, v0, v1 int) int {
-	_v, _err := Sum(v, v0, v1)
+func MustSumAndSub(v1, v2 int) (int, int) {
+	_v0, _v1, _err := SumAndSub(v1, v2)
 	if _err != nil {
 		panic(_err)
 	}
-	return _v
+	return _v0, _v1
 }
 ```

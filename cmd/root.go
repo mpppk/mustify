@@ -1,10 +1,14 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"go/format"
 	"go/token"
+	"io"
 	"os"
+
+	"golang.org/x/tools/imports"
 
 	"github.com/mpppk/mustify/lib"
 
@@ -52,8 +56,17 @@ func NewRootCmd(fs afero.Fs) (*cobra.Command, error) {
 				return nil
 			}
 
-			if err := format.Node(cmd.OutOrStdout(), token.NewFileSet(), newFile); err != nil {
-				return errors.Wrap(err, "failed to write ast file to  "+filePath)
+			buf := new(bytes.Buffer)
+			if err := format.Node(buf, token.NewFileSet(), newFile); err != nil {
+				return errors.Wrap(err, "failed to output")
+			}
+			newSrc, err := formatSrc(buf.Bytes())
+			if err != nil {
+				return err
+			}
+
+			if _, err := io.WriteString(cmd.OutOrStdout(), string(newSrc)); err != nil {
+				return err
 			}
 			return nil
 		},
@@ -64,6 +77,16 @@ func NewRootCmd(fs afero.Fs) (*cobra.Command, error) {
 	}
 
 	return cmd, nil
+}
+
+func formatSrc(bytes []byte) ([]byte, error) {
+	options := &imports.Options{
+		TabWidth:  8,
+		TabIndent: true,
+		Comments:  true,
+		Fragment:  true,
+	}
+	return imports.Process("<standard input>", bytes, options)
 }
 
 func registerFlags(cmd *cobra.Command) error {
