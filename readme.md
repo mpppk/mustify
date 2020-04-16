@@ -10,7 +10,9 @@ For example, `regexp.MustCompile` is the wrapper for `regexp.Compile` which occu
 mustify generate the wrapper automatically from all functions which return error.
 
 ## Usage
-Assume you have below functions in `lib/math.go`
+`mustify [path]`
+
+Assume you have below functions in `math.go`
 
 ```go
 package lib
@@ -43,7 +45,7 @@ func unexportedFunc() error {
 Then execute mustify:
 
 ```shell script
-$ mustify < lib/math.go > lib/must-math.go
+$ mustify math.go > must-math.go
 $ cat lib/must-math.go
 package lib
 
