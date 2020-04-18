@@ -48,7 +48,8 @@ func NewRootCmd(fs afero.Fs) (*cobra.Command, error) {
 				filePath = args[0]
 				src = nil
 			}
-			newFile, ok, err := lib.GenerateErrorWrappersFromReaderOrFile(filePath, src)
+			fset := token.NewFileSet()
+			newFile, ok, err := lib.GenerateErrorWrappersFromReaderOrFile(fset, filePath, src)
 			if err != nil {
 				return err
 			}
@@ -57,7 +58,7 @@ func NewRootCmd(fs afero.Fs) (*cobra.Command, error) {
 			}
 
 			buf := new(bytes.Buffer)
-			if err := format.Node(buf, token.NewFileSet(), newFile); err != nil {
+			if err := format.Node(buf, fset, newFile); err != nil {
 				return errors.Wrap(err, "failed to output")
 			}
 			newSrc, err := formatSrc(buf.Bytes())
