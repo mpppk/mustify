@@ -49,6 +49,7 @@ $ mustify math.go > must-math.go
 $ cat lib/must-math.go
 package lib
 
+// MustSqrt returns the square root of x
 func MustSqrt(x float64) float64 {
 	_v0, _err := Sqrt(x)
 	if _err != nil {
@@ -56,6 +57,8 @@ func MustSqrt(x float64) float64 {
 	}
 	return _v0
 }
+
+// MustSumAndSub returns sum and sub of arguments
 func MustSumAndSub(v1, v2 int) (int, int) {
 	_v0, _v1, _err := SumAndSub(v1, v2)
 	if _err != nil {
