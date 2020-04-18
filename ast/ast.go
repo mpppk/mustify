@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"strings"
 
 	"github.com/go-toolsmith/astcopy"
 )
@@ -44,8 +45,23 @@ func GenerateErrorFuncWrapper(orgFuncDecl *ast.FuncDecl) (*ast.FuncDecl, bool) {
 	}
 	addPrefixToFunc(funcDecl, "Must")
 
-	funcDecl.Doc = orgFuncDecl.Doc
+	cg := astcopy.CommentGroup(orgFuncDecl.Doc)
+	replaceCommentGroup(cg, orgFuncDecl.Name.Name)
+	funcDecl.Doc = cg
 	return funcDecl, true
+}
+
+func replaceCommentGroup(cg *ast.CommentGroup, funcName string) {
+	if cg == nil || cg.List == nil {
+		return
+	}
+	for _, comment := range cg.List {
+		replaceComment(comment, funcName)
+	}
+}
+
+func replaceComment(comment *ast.Comment, funcName string) {
+	comment.Text = strings.ReplaceAll(comment.Text, funcName, "Must"+funcName)
 }
 
 func identsToExprs(idents []*ast.Ident) (exprs []ast.Expr) {
