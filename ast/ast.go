@@ -43,6 +43,8 @@ func GenerateErrorFuncWrapper(orgFuncDecl *ast.FuncDecl) (*ast.FuncDecl, bool) {
 		},
 	}
 	addPrefixToFunc(funcDecl, "Must")
+
+	funcDecl.Doc = orgFuncDecl.Doc
 	return funcDecl, true
 }
 

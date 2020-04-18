@@ -11,22 +11,22 @@ import (
 	ast2 "github.com/mpppk/mustify/ast"
 )
 
-func GenerateErrorWrappersFromReaderOrFile(filePath string, reader io.Reader) (*ast.File, bool, error) {
+func GenerateErrorWrappersFromReaderOrFile(fset *token.FileSet, filePath string, reader io.Reader) (*ast.File, bool, error) {
 	if reader == nil {
-		file, err := parser.ParseFile(token.NewFileSet(), filePath, nil, parser.ParseComments)
+		file, err := parser.ParseFile(fset, filePath, nil, parser.ParseComments)
 		if err != nil {
 			return nil, false, err
 		}
-		return generateErrorWrappersFromFile(file)
+		return generateErrorWrappersFromFile(fset, file)
 	}
-	file, err := parser.ParseFile(token.NewFileSet(), filePath, reader, parser.ParseComments)
+	file, err := parser.ParseFile(fset, filePath, reader, parser.ParseComments)
 	if err != nil {
 		return nil, false, err
 	}
-	return generateErrorWrappersFromFile(file)
+	return generateErrorWrappersFromFile(fset, file)
 }
 
-func generateErrorWrappersFromFile(file *ast.File) (*ast.File, bool, error) {
+func generateErrorWrappersFromFile(fset *token.FileSet, file *ast.File) (*ast.File, bool, error) {
 	newFile := astcopy.File(file)
 	var newDecls []ast.Decl
 	importDecls := ast2.ExtractImportDeclsFromDecls(newFile.Decls)
@@ -38,6 +38,7 @@ func generateErrorWrappersFromFile(file *ast.File) (*ast.File, bool, error) {
 	}
 	newDecls = append(newDecls, errorWrappers...)
 	newFile.Decls = newDecls
+	newFile.Comments = nil
 	return newFile, true, nil
 }
 
